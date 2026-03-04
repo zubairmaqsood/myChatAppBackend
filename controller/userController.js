@@ -1,7 +1,7 @@
 import userModel from "../model/userModel.js";
-import { generateToken } from "../utils/generateToken.js";
+import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
-import {uploads} from "../middlewares/multerConfig.js";
+import {uploads} from "../config/multerConfig.js";
 
 export const loginUser = async (req, res) => {
   try {
@@ -18,6 +18,8 @@ export const loginUser = async (req, res) => {
     const token = generateToken(user);
     const userResponse = user.toObject()
     delete userResponse.password
+    delete userResponse.createdAt
+    delete userResponse.updatedAt
     res.status(200).json({user:userResponse, token });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -40,6 +42,8 @@ export const signupUser = async (req, res) => {
 
     const userResponse = user.toObject()
     delete userResponse.password
+    delete userResponse.createdAt
+    delete userResponse.updatedAt
     res.status(201).json({ user:userResponse, token });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -49,7 +53,7 @@ export const signupUser = async (req, res) => {
 export const getProfile = async(req,res)=>{
   const userId = req.user._id
   try{
-    const user = await userModel.findById(userId).select("-password")
+    const user = await userModel.findById(userId).select("-password -updatedAt")
     if(!user) return res.status(404).json({message:"User not found"})
     res.status(200).json({user})
   }catch(err){
@@ -77,7 +81,7 @@ export const updateProfile = async(req,res)=>{
 
       const updatedUser = await userModel.findByIdAndUpdate(
         userId,updatedData,{new:true,runValidators:true}
-      ).select("-password")
+      ).select("-password -createdAt -updatedAt")
 
       if(!updatedUser) return res.status(404).json({message:"User not found"})
       res.status(200).json({user:updatedUser})
@@ -85,6 +89,5 @@ export const updateProfile = async(req,res)=>{
       res.status(500).json({message:err.message})
     }
   })
-
 
 }

@@ -84,6 +84,7 @@ export const getUserChats = async(req,res)=>{
                 $project:{
                     _id:1,
                     name:"$userInfo.name",
+                    profilePic:"$userInfo.profilePic",
                     lastMessage:1,
                     lastMessageTime:1
                 }
