@@ -5,8 +5,16 @@ export const getMessages = async (req, res) => {
     try{
         const reciverId = req.params.id
         const senderId = req.user._id
-        const messages = await messageModel.find({users:{$all:[senderId,reciverId]}}).sort({createdAt:1})
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page-1)*limit
 
+        const messages = await messageModel.find({users:{$all:[senderId,reciverId]}})
+        .sort({createdAt:-1}) // because pagination picks from start that's why newer one at start and then reverse it for older first
+        .skip(skip)
+        .limit(limit)
+
+        messages = messages.reverse()
         const projectedMessages = messages.map((msg) => {
             return {
                 _id: msg._id,
