@@ -50,6 +50,7 @@ export const signupUser = async (req, res) => {
   }
 };
 
+// for our own profile data
 export const getProfile = async(req,res)=>{
   const userId = req.user._id
   try{
@@ -89,5 +90,7 @@ export const updateProfile = async(req,res)=>{
       res.status(500).json({message:err.message})
     }
   })
+
+  const getChatUserData = async()
 
 }
