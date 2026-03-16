@@ -19,7 +19,8 @@ export const getMessages = async (req, res) => {
         });
         res.status(200).json(projectedMessages);
     }catch(err){
-        return res.status(500).json({message:err.message})
+        console.error(err.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
 
@@ -40,7 +41,8 @@ export const createMessage = async(req,res)=>{
 
         return res.status(201).json({message})
     }catch(err){
-        return res.status(500).json({message:err.message})
+        console.error(err.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
 
@@ -97,6 +99,29 @@ export const getUserChats = async(req,res)=>{
         ])
         res.status(200).json(chats) 
     }catch(err){
-        return res.status(500).json({message:err.message})
+        console.error( err.message);
+        res.status(500).json({ message: "Internal Server Error" });
     }
 }
+
+// for deleting chats of user
+export const deleteChat = async (req, res) => {
+    try {
+        const myId = req.user._id; // From auth middleware
+        const userId = req.params.id; // The user to delete the chat with
+
+        // Delete all messages where BOTH users are in the 'users' array
+        const result = await messageModel.deleteMany({
+            users: { $all: [myId, userId] }
+        });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "No chat history found to delete." });
+        }
+
+        res.status(200).json({ message: "Chat deleted successfully." });
+    } catch (err) {
+        console.error("Error in deleteChat:", err.message);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};

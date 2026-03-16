@@ -9,13 +9,10 @@ const port = process.env.PORT || 3000;
 import "./config/mongooseConfig.js";
 import userRouter from "./router/userRouter.js";
 import messageRouter from "./router/messageRouter.js";
-import { ADD_USER_EVENT } from './utils/constants.js';
-import { SEND_MESSAGE_EVENT } from './utils/constants.js';
-import { DISCONNECT_EVENT } from './utils/constants.js';
-import { CONNECT_EVENT } from './utils/constants.js';
-import { SELF_ONLINE_EVENT } from './utils/constants.js';
-import { ONLINE_USERS_EVENT } from './utils/constants.js';
-import { SELF_OFFLINE_EVENT } from './utils/constants.js';
+import { ADD_USER_EVENT,RECIEVE_MESSAGE_EVENT,SEND_MESSAGE_EVENT,DISCONNECT_EVENT,CONNECT_EVENT,
+NEW_ONLINE_EVENT,ONLINE_USERS_EVENT ,NEW_OFFLINE_EVENT } 
+from './utils/constants.js';
+
 
 // http server
 const server = http.createServer(app)
@@ -23,8 +20,7 @@ const server = http.createServer(app)
 // socket.io server
 const io = new Server(server,{
   cors:{
-    origin:"http://localhost:5173",
-    methods:["GET","POST"]
+    origin:"http://localhost:5173"
   }
 })
 
@@ -49,16 +45,16 @@ io.on(CONNECT_EVENT,(socket)=>{
   socket.on(ADD_USER_EVENT,(userId)=>{
     socket.userId = userId
     onlineUsers.set(userId,socket.id)
-    socket.broadcast.emit(SELF_ONLINE_EVENT,userId)
+    socket.broadcast.emit(NEW_ONLINE_EVENT,userId) // to tell everyone i am onine 
 
     const onlineUsersList = Array.from(onlineUsers.keys())
-    socket.emit(ONLINE_USERS_EVENT,onlineUsersList)
+    socket.emit(ONLINE_USERS_EVENT,onlineUsersList)// to know who else is online 
   })
 
   socket.on(SEND_MESSAGE_EVENT,(data)=>{
     const sendUserSocket = onlineUsers.get(data.to)
     if(sendUserSocket){
-      socket.to(sendUserSocket).emit(SEND_MESSAGE_EVENT,{
+      socket.to(sendUserSocket).emit(RECIEVE_MESSAGE_EVENT,{
         ...data,
         from: socket.userId
       })
@@ -66,9 +62,14 @@ io.on(CONNECT_EVENT,(socket)=>{
   })
 
   socket.on(DISCONNECT_EVENT,()=>{
-    if(socket.userId){
-      onlineUsers.delete(socket.userId)
-      socket.broadcast.emit(SELF_OFFLINE_EVENT,socket.userId)
+    // Look up what socket ID is currently saved for this user
+    const savedSocketId = onlineUsers.get(socket.userId);
+
+    // ONLY delete them if the saved ID matches the disconnecting ID.
+    // If it doesn't match, it means they already refreshed and reconnected on a new socket!
+    if (savedSocketId === socket.id) {
+        onlineUsers.delete(socket.userId);
+        socket.broadcast.emit(NEW_OFFLINE_EVENT, socket.userId);
     }
   })
 })

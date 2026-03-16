@@ -22,7 +22,8 @@ export const loginUser = async (req, res) => {
     delete userResponse.updatedAt
     res.status(200).json({user:userResponse, token });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error( err.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -46,7 +47,8 @@ export const signupUser = async (req, res) => {
     delete userResponse.updatedAt
     res.status(201).json({ user:userResponse, token });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(err.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -56,9 +58,10 @@ export const getProfile = async(req,res)=>{
   try{
     const user = await userModel.findById(userId).select("-password -updatedAt")
     if(!user) return res.status(404).json({message:"User not found"})
-    res.status(200).json({user})
+    res.status(200).json(user)
   }catch(err){
-    res.status(500).json({message:err.message})
+   console.error( err.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 }
 
@@ -87,10 +90,66 @@ export const updateProfile = async(req,res)=>{
       if(!updatedUser) return res.status(404).json({message:"User not found"})
       res.status(200).json({user:updatedUser})
     }catch(err){
-      res.status(500).json({message:err.message})
+      console.error(err.message);
+      res.status(500).json({ message: "Internal Server Error" });
     }
   })
 
-  const getChatUserData = async()
-
 }
+
+
+export const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Find the user but NEVER send the password back!
+        const user = await userModel.findById(id).select("-password -updatedAt -email -createdAt");
+
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        // Send the user data back to your frontend
+        res.status(200).json({ user });
+    } catch (err) {
+        console.error("Error in getUserById: ", err.message);
+        
+        // If the ID format is completely invalid (not a valid MongoDB ObjectId)
+        if (err.kind === "ObjectId") {
+          return res.status(404).json({ message: "User not found" });
+        }
+
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+};
+
+// to search user searched by search bar
+
+export const searchUsers = async (req, res) => {
+    try {
+        // 1. Grab the search word from the URL query
+        const keyword = req.query.keyword;
+
+        // If they didn't type anything, return an empty array
+        if (!keyword) {
+            return res.status(200).json({ users: [] });
+        }
+
+        // 2. Create the MongoDB search query
+        // $regex: keyword -> Looks for partial matches (e.g., "zub" matches "Zubair")
+        // $options: "i" -> Makes it case-insensitive
+        const searchQuery = {
+            name: { $regex: keyword, $options: "i" },
+            _id: { $ne: req.user._id } // $ne means "Not Equal". Excludes the logged-in user!
+        };
+
+        // 3. Find the users and remove passwords from the result
+        const users = await userModel.find(searchQuery).select("-password -createdAt -updatedAt -email");
+
+        res.status(200).json({ users });
+
+    } catch (error) {
+        console.error("Error in searchUsers controller:", error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+};
