@@ -10,7 +10,7 @@ import "./config/mongooseConfig.js";
 import userRouter from "./router/userRouter.js";
 import messageRouter from "./router/messageRouter.js";
 import { ADD_USER_EVENT,RECIEVE_MESSAGE_EVENT,SEND_MESSAGE_EVENT,DISCONNECT_EVENT,CONNECT_EVENT,
-NEW_ONLINE_EVENT,ONLINE_USERS_EVENT ,NEW_OFFLINE_EVENT } 
+NEW_ONLINE_EVENT,ONLINE_USERS_EVENT ,NEW_OFFLINE_EVENT ,UPDATE_PROFILE,FRIEND_UPDATE_PROFILE} 
 from './utils/constants.js';
 
 
@@ -40,7 +40,6 @@ const onlineUsers = new Map()
 
 // socket.io connection
 io.on(CONNECT_EVENT,(socket)=>{
-  console.log("A user connected with id: ",socket.id)
   
   socket.on(ADD_USER_EVENT,(userId)=>{
     socket.userId = userId
@@ -60,6 +59,12 @@ io.on(CONNECT_EVENT,(socket)=>{
       })
     }
   })
+
+  // for updation of profile data
+  socket.on(UPDATE_PROFILE, (updatedUserData) => {
+    // Broadcast it to EVERYONE ELSE connected to the app
+    socket.broadcast.emit(FRIEND_UPDATE_PROFILE, updatedUserData);
+  });
 
   socket.on(DISCONNECT_EVENT,()=>{
     // Look up what socket ID is currently saved for this user

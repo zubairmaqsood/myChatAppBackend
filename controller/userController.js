@@ -1,6 +1,8 @@
 import userModel from "../model/userModel.js";
 import generateToken from "../utils/generateToken.js";
 import bcrypt from "bcrypt";
+import fs from "fs";
+import path from "path";
 import {uploads} from "../config/multerConfig.js";
 
 export const loginUser = async (req, res) => {
@@ -65,37 +67,61 @@ export const getProfile = async(req,res)=>{
   }
 }
 
-export const updateProfile = async(req,res)=>{
 
-  //middleware to handle file upload
-  uploads.single("profilePic")(req,res,async (err)=>{
-    if(err) return res.status(400).json({message:err.message})
-    try{
-      const userId = req.user._id
-      const {name,password} = req.body
-      const updatedData = {}
-      if(name) updatedData.name = name
-      if(password){
+// for uplod of profile pic or delete profile pic
+export const updateProfile = async (req, res) => {
+  uploads.single("profilePic")(req, res, async (err) => {
+    if (err) return res.status(400).json({ message: err.message });
+    
+    try {
+      const userId = req.user._id;
+      const { name, password, removeProfilePic } = req.body; 
+      const updatedData = {};
+
+      if (name) updatedData.name = name;
+      if (password) {
         const salt = await bcrypt.genSalt(12);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        updatedData.password = hashedPassword
+        updatedData.password = await bcrypt.hash(password, salt);
       }
 
-      if(req.file) updatedData.profilePic = req.file.filename
+      // 1. Fetch the user FIRST so we know what their old picture was!
+      const currentUser = await userModel.findById(userId);
 
+      // SCENARIO A: They uploaded a NEW picture
+      if (req.file) {
+        updatedData.profilePic = req.file.filename;
+        
+        // Delete the OLD picture from the server hard drive!
+        if (currentUser.profilePic) {
+          const oldPath = path.join("uploads/profilePics", currentUser.profilePic);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath); 
+        }
+      } 
+      // SCENARIO B: They clicked "Remove Photo" (no file attached)
+      else if (removeProfilePic === "true" || removeProfilePic === true) {
+        updatedData.profilePic = null; // Clear it in the database
+        
+        // Delete the OLD picture from the server hard drive!
+        if (currentUser.profilePic) {
+          const oldPath = path.join("uploads/profilePics", currentUser.profilePic);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+      }
+
+      // 2. Save the new data to MongoDB
       const updatedUser = await userModel.findByIdAndUpdate(
-        userId,updatedData,{new:true,runValidators:true}
-      ).select("-password -createdAt -updatedAt")
+        userId, updatedData, { new: true, runValidators: true }
+      ).select("-password -createdAt -updatedAt -email");
 
-      if(!updatedUser) return res.status(404).json({message:"User not found"})
-      res.status(200).json({user:updatedUser})
-    }catch(err){
+      if (!updatedUser) return res.status(404).json({ message: "User not found" });
+      res.status(200).json({ user: updatedUser });
+      
+    } catch (err) {
       console.error(err.message);
       res.status(500).json({ message: "Internal Server Error" });
     }
-  })
-
-}
+  });
+};
 
 
 export const getUserById = async (req, res) => {
