@@ -20,7 +20,7 @@ const server = http.createServer(app)
 // socket.io server
 const io = new Server(server,{
   cors:{
-    origin:"http://localhost:5173"
+    origin:"https://my-chat-app-frontend-git-main-zubairmaqsoods-projects.vercel.app/"
   }
 })
 
