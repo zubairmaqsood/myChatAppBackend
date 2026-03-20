@@ -20,13 +20,13 @@ const server = http.createServer(app)
 // socket.io server
 const io = new Server(server,{
   cors:{
-    origin:"https://my-chat-app-frontend-git-main-zubairmaqsoods-projects.vercel.app/"
+    origin:process.env.FRONTEND_URL
   }
 })
 
 // express middlewares
 app.use(cors({
-  origin: 'http://localhost:5173'
+  origin: process.env.FRONTEND_URL
 }));
 
 app.use(express.json());
